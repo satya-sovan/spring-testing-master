@@ -22,7 +22,16 @@ jobs:
       - name: Extract Java version from build.gradle
         id: extract_java_version
         run: |
-          JAVA_VERSION=$(grep 'sourceCompatibility' build.gradle | awk '{print $2}')
+          JAVA_VERSION=$(grep 'sourceCompatibility' build.gradle | awk '{print $3}' | sed "s/'//g")
+          # Convert Java version format to SemVer if needed
+          if [[ "$JAVA_VERSION" == "1.8" ]]; then
+            JAVA_VERSION="8"
+          elif [[ "$JAVA_VERSION" == "17" ]]; then
+            JAVA_VERSION="17"
+          else
+            echo "Unsupported Java version format."
+            exit 1
+          fi
           echo "Java Version: $JAVA_VERSION"
           echo "::set-output name=java_version::$JAVA_VERSION"
 
@@ -51,7 +60,16 @@ jobs:
       - name: Extract Java version from build.gradle
         id: extract_java_version
         run: |
-          JAVA_VERSION=$(grep 'sourceCompatibility' build.gradle | awk '{print $2}')
+          JAVA_VERSION=$(grep 'sourceCompatibility' build.gradle | awk '{print $3}' | sed "s/'//g")
+          # Convert Java version format to SemVer if needed
+          if [[ "$JAVA_VERSION" == "1.8" ]]; then
+            JAVA_VERSION="8"
+          elif [[ "$JAVA_VERSION" == "17" ]]; then
+            JAVA_VERSION="17"
+          else
+            echo "Unsupported Java version format."
+            exit 1
+          fi
           echo "Java Version: $JAVA_VERSION"
           echo "::set-output name=java_version::$JAVA_VERSION"
 
