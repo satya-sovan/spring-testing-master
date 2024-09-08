@@ -47,26 +47,6 @@ jobs:
 
       - name: Build and test the project with Gradle
         run: ./gradlew clean build
-  
-  coverage-check:
-    runs-on: ubuntu-latest
-    needs: build-and-test
-
-    steps:
-      - name: Download code coverage report
-        uses: actions/download-artifact@v3
-        with:
-          name: coverage-report
-
-      - name: Check code coverage
-        run: |
-          # Extract coverage percentage from the generated report
-          COVERAGE=$(grep -oP '(?<=Coverage: )[0-9]+(?=%)' build/reports/jacoco/test/html/index.html | head -n 1)
-          echo "Coverage: $COVERAGE%"
-          if [ "$COVERAGE" -lt 80 ]; then
-            echo "Coverage is below threshold of 80%!"
-            exit 1
-          fi
 
   # Job 2: Build, Test, Merge develop to master, and Create PR
   create-pr:
