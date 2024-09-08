@@ -19,6 +19,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Extract Java version from build.gradle
+        id: extract_java_version
+        run: |
+          JAVA_VERSION=$(grep 'sourceCompatibility' build.gradle | awk '{print $2}')
+          echo "Java Version: $JAVA_VERSION"
+          echo "::set-output name=java_version::$JAVA_VERSION"
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: ${{ steps.extract_java_version.outputs.java_version }}
+
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
@@ -34,6 +47,19 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Extract Java version from build.gradle
+        id: extract_java_version
+        run: |
+          JAVA_VERSION=$(grep 'sourceCompatibility' build.gradle | awk '{print $2}')
+          echo "Java Version: $JAVA_VERSION"
+          echo "::set-output name=java_version::$JAVA_VERSION"
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: ${{ steps.extract_java_version.outputs.java_version }}
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew
