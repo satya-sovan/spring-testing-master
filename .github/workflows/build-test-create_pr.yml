@@ -19,6 +19,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
       - name: Build and test the project with Gradle
         run: ./gradlew clean build
 
@@ -31,6 +34,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
 
       - name: Build and test the develop branch with Gradle
         run: ./gradlew clean build
