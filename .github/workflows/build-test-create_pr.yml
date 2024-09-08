@@ -28,13 +28,17 @@ jobs:
 
       - name: Fetch all branches
         run: |
-          git fetch --all
+          git fetch origin +refs/heads/*:refs/remotes/origin/*
 
-      - name: Create a local branch for the target branch
+      - name: Checkout target branch
         run: |
-          git checkout -b target-branch ${{ github.event.pull_request.base.ref }}
+          git checkout ${{ github.event.pull_request.base.ref }}
 
-      - name: Merge PR source branch into local target branch
+      - name: Create a temporary branch for merging
+        run: |
+          git checkout -b temp-merge-branch
+
+      - name: Merge PR source branch into temporary branch
         run: |
           git merge origin/${{ github.event.pull_request.head.ref }} --no-ff --commit -m "Merge PR source branch"
 
