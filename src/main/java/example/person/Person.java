@@ -7,6 +7,7 @@ import jakarta.persistence.Id;
 
 import java.util.Objects;
 
+//test commit for git action
 @Entity
 public class Person {
 
