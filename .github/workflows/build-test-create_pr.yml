@@ -3,7 +3,7 @@ name: Build, Test, and Create PR from develop to master
 on:
   pull_request:
     branches:
-      - develop
+      - '*'
 
   push:
     branches:
@@ -12,12 +12,35 @@ on:
 jobs:
   # Job 1: Build and Test on PR to develop
   build-and-test:
+    name: Build and run testcases
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+
+      - name: Set up Git
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+      - name: Fetch all branches
+        run: |
+          git fetch origin +refs/heads/*:refs/remotes/origin/*
+
+      - name: Checkout target branch
+        run: |
+          git checkout ${{ github.event.pull_request.base.ref }}
+
+      - name: Create a temporary branch for merging
+        run: |
+          git checkout -b temp-merge-branch
+
+      - name: Merge PR source branch into temporary branch
+        run: |
+          git merge origin/${{ github.event.pull_request.head.ref }} --no-ff --commit -m "Merge PR source branch"
 
       - name: Extract Java version from build.gradle
         id: extract_java_version
@@ -36,7 +59,7 @@ jobs:
           echo "::set-output name=java_version::$JAVA_VERSION"
 
       - name: Set up JDK
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: ${{ steps.extract_java_version.outputs.java_version }}
@@ -55,7 +78,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Extract Java version from build.gradle
         id: extract_java_version
