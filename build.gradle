@@ -4,6 +4,7 @@ plugins {
 	id 'java'
 	id 'idea'
 	id 'eclipse'
+	id 'jacoco'
 }
 
 group = 'com.hamvocke.spring-testing'
@@ -12,7 +13,21 @@ version = '0.0.1-SNAPSHOT'
 java {
 	sourceCompatibility = '17'
 }
+jacoco {
+    toolVersion = "0.8.8"  // or any version compatible with your setup
+}
 
+jacocoTestReport {
+    reports {
+        xml.required = true
+        html.required = true
+    }
+}
+
+test {
+    useJUnitPlatform()
+    finalizedBy jacocoTestReport
+}
 repositories {
 	mavenCentral()
 }
