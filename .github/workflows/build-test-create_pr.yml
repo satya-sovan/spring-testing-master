@@ -133,7 +133,7 @@ jobs:
           echo "coverage=$PERCENTAGE" >> $GITHUB_ENV
 
       - name: Print Coverage
-        run:
+        run: |
           echo "Line Coverage: ${{ env.coverage }}%"
 
       - name: Post Coverage to PR
