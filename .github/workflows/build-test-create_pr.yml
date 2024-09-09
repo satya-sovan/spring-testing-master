@@ -124,7 +124,7 @@ jobs:
           ./gradlew testCoverage
 
       - name: List Files
-        run: ls -l
+        run: ls -l build/
 
       - name: List Report Files
         run: ls -l build/reports/jacoco/test/
