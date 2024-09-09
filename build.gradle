@@ -62,3 +62,7 @@ task testCoverage(type: JacocoReport) {
 		html.required.set(true)
 	}
 }
+
+tasks.named('build') {
+	dependsOn(tasks.named('jacocoTestReport'))
+}
