@@ -108,7 +108,7 @@ jobs:
 
   test-report:
     name: Code coverage
-    needs: build-and-test-pr
+    #needs: build-and-test-pr
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
