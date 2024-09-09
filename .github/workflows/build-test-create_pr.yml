@@ -123,11 +123,12 @@ jobs:
           chmod +x gradlew
           ./gradlew testCoverage
 
+      - name: List Files
+        run: ls -l
+
       - name: List Report Files
         run: ls -l build/reports/jacoco/test/
 
-      - name: List Files
-        run: ls -l
 
       - name: Extract Coverage Percentage
         id: coverage
