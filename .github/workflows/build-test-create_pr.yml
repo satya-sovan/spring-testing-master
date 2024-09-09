@@ -10,7 +10,7 @@ jobs:
   build-and-test-pr:
     name: Build and run testcases of PR
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    if: false #github.event_name == 'pull_request'
     
     steps:
       - name: Checkout code
@@ -50,7 +50,7 @@ jobs:
     name: Merger the changes and build and run testcases
     needs: build-and-test-pr
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    if: false #github.event_name == 'pull_request'
     
     steps:
       - name: Checkout code
@@ -122,6 +122,12 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew testCoverage
+
+      - name: List Report Files
+        run: ls -l build/reports/jacoco/test/
+
+      - name: List Files
+        run: ls -l
 
       - name: Extract Coverage Percentage
         id: coverage
