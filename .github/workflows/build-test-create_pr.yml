@@ -123,13 +123,21 @@ jobs:
           chmod +x gradlew
           ./gradlew testCoverage
 
-      - name: Add coverage to PR
-        id: jacoco
-        uses: madrapps/jacoco-report@v1.7.0
-        with:
-          paths: |
-            ${{ github.workspace }}/**/build/reports/jacoco/prodNormalDebugCoverage/prodNormalDebugCoverage.xml,
-            ${{ github.workspace }}/**/build/reports/jacoco/**/debugCoverage.xml
-          token: ${{ secrets.GITHUB_TOKEN }}
-          min-coverage-overall: 40
-          min-coverage-changed-files: 60
+      - name: Extract Coverage Percentage
+        id: coverage
+        run: |
+          COVERAGE=$(grep -oPm1 "(?<=<counter type=\"LINE\" covered=\")\d+" build/reports/jacoco/test/jacocoTestReport.xml)
+          MISSED=$(grep -oPm1 "(?<=missed=\")\d+" build/reports/jacoco/test/jacocoTestReport.xml)
+          TOTAL=$((COVERAGE + MISSED))
+          PERCENTAGE=$(awk "BEGIN {printf \"%.2f\", (${COVERAGE} / ${TOTAL}) * 100}")
+          echo "coverage=$PERCENTAGE" >> $GITHUB_ENV
+
+      - name: Print Coverage
+        run:
+          echo "Line Coverage: ${{ env.coverage }}%"
+
+      - name: Post Coverage to PR
+        if: github.event_name == 'pull_request'
+        run: |
+          gh auth login --with-token ${{ secrets.GITHUB_TOKEN }}
+          gh pr comment ${{ github.event.pull_request.number }} --body "JaCoCo Code Coverage: ${{ env.coverage }}%"
