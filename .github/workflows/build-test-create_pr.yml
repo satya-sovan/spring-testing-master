@@ -168,7 +168,7 @@ jobs:
           def coverage_indicator(coverage):
             return "🔴" if coverage < 80 else "🟢"
 
-          summary = f"### JaCoCo Coverage Summary:\\n"
+          summary = f"### Test Coverage Summary:\\n"
           summary += f"**Instruction Coverage**: {coverage_indicator(coverage['instruction_coverage'])} {coverage['instruction_coverage']:.2f}%\\n"
           summary += f"**Line Coverage**: {coverage_indicator(coverage['line_coverage'])} {coverage['line_coverage']:.2f}%\\n"
           summary += f"**Branch Coverage**: {coverage_indicator(coverage['branch_coverage'])} {coverage['branch_coverage']:.2f}%\\n"
