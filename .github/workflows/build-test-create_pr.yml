@@ -6,56 +6,32 @@ on:
       - '*'
 
 jobs:
-  # Job 1: Build and Test the PR
   build-and-test-pr:
-    name: Build and run testcases of PR
+    name: Build and Test PR
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Extract Java version from build.gradle
-        id: extract_java_version
-        run: |
-          JAVA_VERSION=$(grep 'sourceCompatibility' build.gradle | awk '{print $3}' | sed "s/'//g")
-          # Convert Java version format to SemVer if needed
-          if [[ "$JAVA_VERSION" == "1.8" ]]; then
-            JAVA_VERSION="8"
-          elif [[ "$JAVA_VERSION" == "17" ]]; then
-            JAVA_VERSION="17"
-          else
-            echo "Unsupported Java version format."
-            exit 1
-          fi
-          echo "Java Version: $JAVA_VERSION"
-          echo "::set-output name=java_version::$JAVA_VERSION"
-
-      - name: Set up JDK
-        uses: actions/setup-java@v4
+      - name: Setup Java and Gradle
+        uses: ./.github/actions/setup-java
         with:
-          distribution: 'temurin'
-          java-version: ${{ steps.extract_java_version.outputs.java_version }}
+          gradle-file: 'build.gradle'
 
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
-
-      - name: Build and test the project with Gradle
+      - name: Build and test with Gradle
         run: ./gradlew clean build
 
-
-  # Job 2: Build and Test on PR to develop
-  merge-to-target-and-build-and-test:
-    name: Merger the changes and build and run testcases
+  merge-to-target-and-build:
+    name: Merge and Build on Target Branch
     needs: build-and-test-pr
     runs-on: ubuntu-latest
-    if: false #github.event_name == 'pull_request'
-    
+    if: github.event_name == 'pull_request'
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
 
       - name: Set up Git
         run: |
@@ -63,88 +39,110 @@ jobs:
           git config user.email "github-actions@github.com"
 
       - name: Fetch all branches
-        run: |
-          git fetch origin +refs/heads/*:refs/remotes/origin/*
+        run: git fetch origin +refs/heads/*:refs/remotes/origin/*
 
-      - name: Checkout target branch
+      - name: Checkout and merge PR
         run: |
           git checkout ${{ github.event.pull_request.base.ref }}
-
-      - name: Create a temporary branch for merging
-        run: |
           git checkout -b temp-merge-branch
-
-      - name: Merge PR source branch into temporary branch
-        run: |
           git merge origin/${{ github.event.pull_request.head.ref }} --no-ff --commit -m "Merge PR source branch"
 
-      - name: Extract Java version from build.gradle
-        id: extract_java_version
-        run: |
-          JAVA_VERSION=$(grep 'sourceCompatibility' build.gradle | awk '{print $3}' | sed "s/'//g")
-          # Convert Java version format to SemVer if needed
-          if [[ "$JAVA_VERSION" == "1.8" ]]; then
-            JAVA_VERSION="8"
-          elif [[ "$JAVA_VERSION" == "17" ]]; then
-            JAVA_VERSION="17"
-          else
-            echo "Unsupported Java version format."
-            exit 1
-          fi
-          echo "Java Version: $JAVA_VERSION"
-          echo "::set-output name=java_version::$JAVA_VERSION"
-
-      - name: Set up JDK
-        uses: actions/setup-java@v4
+      - name: Setup Java and Gradle
+        uses: ./.github/actions/setup-java
         with:
-          distribution: 'temurin'
-          java-version: ${{ steps.extract_java_version.outputs.java_version }}
+          gradle-file: 'build.gradle'
 
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
-
-      - name: Build and test the project with Gradle
+      - name: Build and test with Gradle
         run: ./gradlew clean build
 
   test-report:
-    name: Code coverage
+    name: Code Coverage
     needs: build-and-test-pr
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
+
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up JDK 17
-        uses: actions/setup-java@v1
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Java and Gradle
+        uses: ./.github/actions/setup-java
         with:
-          java-version: 17
-      - name: Run Coverage
+          gradle-file: 'build.gradle'
+
+      - name: Build and test with JaCoCo
         run: |
           chmod +x gradlew
-          ./gradlew build
+          ./gradlew clean build jacocoTestReport
 
-      - name: List Files
-        run: ls -l build/
+      - name: Check for JaCoCo XML report
+        run: ls build/reports/jacoco/test/jacocoTestReport.xml
 
-      - name: List Report Files
-        run: ls -l build/reports/jacoco/test/
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
 
-
-      - name: Extract Coverage Percentage
+      - name: Parse and report JaCoCo coverage
         id: coverage
         run: |
-          COVERAGE=$(grep -oPm1 "(?<=<counter type=\"LINE\" covered=\")\d+" build/reports/jacoco/test/jacocoTestReport.xml)
-          MISSED=$(grep -oPm1 "(?<=missed=\")\d+" build/reports/jacoco/test/jacocoTestReport.xml)
-          TOTAL=$((COVERAGE + MISSED))
-          PERCENTAGE=$(awk "BEGIN {printf \"%.2f\", (${COVERAGE} / ${TOTAL}) * 100}")
-          echo "coverage=$PERCENTAGE" >> $GITHUB_ENV
+          python - <<EOF
+          import xml.etree.ElementTree as ET
 
-      - name: Print Coverage
-        run: |
-          echo "Line Coverage: ${{ env.coverage }}%"
+          def parse_jacoco_report(xml_file):
+              tree = ET.parse(xml_file)
+              root = tree.getroot()
+
+              coverage_data = {
+                  "line_coverage": None,
+                  "branch_coverage": None,
+                  "method_coverage": None,
+                  "class_coverage": None,
+                  "instruction_coverage": None,
+              }
+
+              for counter in root.findall("./counter"):
+                  coverage_type = counter.attrib['type']
+                  covered = int(counter.attrib['covered'])
+                  missed = int(counter.attrib['missed'])
+                  total = covered + missed
+
+                  if total > 0:
+                      percentage = (covered / total) * 100
+
+                      if coverage_type == "LINE":
+                          coverage_data["line_coverage"] = percentage
+                      elif coverage_type == "BRANCH":
+                          coverage_data["branch_coverage"] = percentage
+                      elif coverage_type == "METHOD":
+                          coverage_data["method_coverage"] = percentage
+                      elif coverage_type == "CLASS":
+                          coverage_data["class_coverage"] = percentage
+                      elif coverage_type == "INSTRUCTION":
+                          coverage_data["instruction_coverage"] = percentage
+
+              return coverage_data
+
+          report_path = "build/reports/jacoco/test/jacocoTestReport.xml"
+          coverage = parse_jacoco_report(report_path)
+
+          def coverage_indicator(coverage):
+            return "🔴" if coverage < 80 else "🟢"
+
+          summary = f"### JaCoCo Coverage Summary:\\n"
+          summary += f"**Instruction Coverage**: {coverage_indicator(coverage['instruction_coverage'])} {coverage['instruction_coverage']:.2f}%\\n"
+          summary += f"**Line Coverage**: {coverage_indicator(coverage['line_coverage'])} {coverage['line_coverage']:.2f}%\\n"
+          summary += f"**Branch Coverage**: {coverage_indicator(coverage['branch_coverage'])} {coverage['branch_coverage']:.2f}%\\n"
+          summary += f"**Method Coverage**: {coverage_indicator(coverage['method_coverage'])} {coverage['method_coverage']:.2f}%\\n"
+          summary += f"**Class Coverage**: {coverage_indicator(coverage['class_coverage'])} {coverage['class_coverage']:.2f}%\\n"
+
+          with open('coverage_summary.txt', 'w') as f:
+              f.write(summary)
+          EOF
 
       - name: Post Coverage to PR
         if: github.event_name == 'pull_request'
-        run: |
-          gh auth login --with-token ${{ secrets.GITHUB_TOKEN }}
-          gh pr comment ${{ github.event.pull_request.number }} --body "JaCoCo Code Coverage: ${{ env.coverage }}%"
+        run: gh pr comment ${{ github.event.pull_request.number }} --body-file "coverage_summary.txt"
+        env:
+          GH_TOKEN: ${{ github.token }}

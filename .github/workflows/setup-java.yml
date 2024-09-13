@@ -1,0 +1,34 @@
+name: 'Setup Java'
+description: 'Extract Java version, set up JDK, and make gradlew executable'
+inputs:
+  gradle-file:
+    description: 'Path to the build.gradle file'
+    required: true
+    default: 'build.gradle'
+runs:
+  using: 'composite'
+  steps:
+    - name: Extract Java version and setup JDK
+      id: setup-java
+      run: |
+        JAVA_VERSION=$(grep 'sourceCompatibility' ${{ inputs.gradle-file }} | awk '{print $3}' | sed "s/'//g")
+        if [[ "$JAVA_VERSION" == "1.8" ]]; then
+          JAVA_VERSION="8"
+        elif [[ "$JAVA_VERSION" == "17" ]]; then
+          JAVA_VERSION="17"
+        else
+          echo "Unsupported Java version format."
+          exit 1
+        fi
+        echo "Java Version: $JAVA_VERSION"
+        echo "::set-output name=java_version::$JAVA_VERSION"
+      shell: bash
+
+    - name: Set up JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: ${{ steps.setup-java.outputs.java_version }}
+
+    - name: Make gradlew executable
+      run: chmod +x ./gradlew
