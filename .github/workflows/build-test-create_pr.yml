@@ -92,7 +92,7 @@ jobs:
     name: Code Coverage
     needs:
       - build-and-test-pr
-      - extract_java_version
+      - extract-java-version
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
