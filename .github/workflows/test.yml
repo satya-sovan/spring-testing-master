@@ -17,6 +17,13 @@ jobs:
       pull-requests: write
 
     steps:
+      - name: Post Coverage to PR Test
+        if: github.event_name == 'pull_request'
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} --body "test"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -101,8 +108,9 @@ jobs:
       - name: Post Coverage to PR
         if: github.event_name == 'pull_request'
         run: |
-          #gh auth login --with-token ${{ secrets.GITHUB_TOKEN }}
           gh pr comment ${{ github.event.pull_request.number }} --body-file "coverage_summary.txt"
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Add comment to PR using gh CLI
         if: false #github.event_name == 'pull_request'
