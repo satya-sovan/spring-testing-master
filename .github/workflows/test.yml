@@ -53,7 +53,7 @@ jobs:
               }
           
               # JaCoCo XML uses 'counter' tags for different coverage types
-              for counter in root.findall(".//counter"):
+              for counter in root.findall("./counter"):
                   coverage_type = counter.attrib['type']
                   covered = int(counter.attrib['covered'])
                   missed = int(counter.attrib['missed'])
