@@ -189,7 +189,6 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            const { exec } = require('@actions/exec');
             const fs = require('fs');
             const summary = fs.readFileSync('coverage_summary.txt', 'utf8');
             
