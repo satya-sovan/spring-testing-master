@@ -3,15 +3,12 @@ name: Build, Test, and Create PR from develop to master
 on:
   pull_request:
     branches:
-      - develop
-
-  push:
-    branches:
-      - develop
+      - '*'
 
 jobs:
-  # Job 1: Build and Test on PR to develop
-  build-and-test:
+  # Job 1: Build and Test the PR
+  build-and-test-pr:
+    name: Build and run testcases of PR
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     
@@ -19,73 +16,135 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Extract Java version from build.gradle
+        id: extract_java_version
+        run: |
+          JAVA_VERSION=$(grep 'sourceCompatibility' build.gradle | awk '{print $3}' | sed "s/'//g")
+          # Convert Java version format to SemVer if needed
+          if [[ "$JAVA_VERSION" == "1.8" ]]; then
+            JAVA_VERSION="8"
+          elif [[ "$JAVA_VERSION" == "17" ]]; then
+            JAVA_VERSION="17"
+          else
+            echo "Unsupported Java version format."
+            exit 1
+          fi
+          echo "Java Version: $JAVA_VERSION"
+          echo "::set-output name=java_version::$JAVA_VERSION"
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ steps.extract_java_version.outputs.java_version }}
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
       - name: Build and test the project with Gradle
         run: ./gradlew clean build
 
-  # Job 2: Build, Test, Merge develop to master, and Create PR
-  create-pr:
+
+  # Job 2: Build and Test on PR to develop
+  merge-to-target-and-build-and-test:
+    name: Merger the changes and build and run testcases
+    needs: build-and-test-pr
     runs-on: ubuntu-latest
-    needs: build-and-test
-    if: github.event_name == 'push'
+    if: false #github.event_name == 'pull_request'
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Build and test the develop branch with Gradle
-        run: ./gradlew clean build
-        continue-on-error: false  # Fail the job if tests fail
 
       - name: Set up Git
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
 
       - name: Fetch all branches
-        run: git fetch origin
-
-      - name: Attempt to merge develop into master
         run: |
-          git checkout master
-          git pull origin master
-          git merge --no-commit --no-ff develop
-        continue-on-error: false  # Fail the job if there's a merge conflict
+          git fetch origin +refs/heads/*:refs/remotes/origin/*
 
-      - name: Install GitHub CLI
+      - name: Checkout target branch
         run: |
-          sudo apt-get install gh
+          git checkout ${{ github.event.pull_request.base.ref }}
 
-      - name: Authenticate GitHub CLI
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create a temporary branch for merging
         run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+          git checkout -b temp-merge-branch
 
-      - name: Get the latest PR title and body from develop
-        id: get_pr_details
+      - name: Merge PR source branch into temporary branch
         run: |
-          # Get the latest PR number for develop
-          PR_NUMBER=$(gh pr list --base develop --state closed --limit 1 --json number -q '.[] | .number')
+          git merge origin/${{ github.event.pull_request.head.ref }} --no-ff --commit -m "Merge PR source branch"
 
-          if [ -z "$PR_NUMBER" ]; then
-            echo "No PR found on develop branch."
+      - name: Extract Java version from build.gradle
+        id: extract_java_version
+        run: |
+          JAVA_VERSION=$(grep 'sourceCompatibility' build.gradle | awk '{print $3}' | sed "s/'//g")
+          # Convert Java version format to SemVer if needed
+          if [[ "$JAVA_VERSION" == "1.8" ]]; then
+            JAVA_VERSION="8"
+          elif [[ "$JAVA_VERSION" == "17" ]]; then
+            JAVA_VERSION="17"
+          else
+            echo "Unsupported Java version format."
             exit 1
           fi
+          echo "Java Version: $JAVA_VERSION"
+          echo "::set-output name=java_version::$JAVA_VERSION"
 
-          # Get the title and body of the latest PR
-          PR_DETAILS=$(gh pr view $PR_NUMBER --json title,body --jq '{title: .title, body: .body}')
-          
-          PR_TITLE=$(echo $PR_DETAILS | jq -r .title)
-          PR_BODY=$(echo $PR_DETAILS | jq -r .body)
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ steps.extract_java_version.outputs.java_version }}
 
-          echo "PR Title: $PR_TITLE"
-          echo "PR Body: $PR_BODY"
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
 
-          echo "::set-output name=pr_title::$PR_TITLE"
-          echo "::set-output name=pr_body::$PR_BODY"
+      - name: Build and test the project with Gradle
+        run: ./gradlew clean build
 
-      - name: Create Pull Request from develop to master
+  test-report:
+    name: Code coverage
+    needs: build-and-test-pr
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up JDK 17
+        uses: actions/setup-java@v1
+        with:
+          java-version: 17
+      - name: Run Coverage
         run: |
-          gh pr create --base master --head develop \
-            --title "${{ steps.get_pr_details.outputs.pr_title }}" \
-            --body "${{ steps.get_pr_details.outputs.pr_body }}"
+          chmod +x gradlew
+          ./gradlew build
+
+      - name: List Files
+        run: ls -l build/
+
+      - name: List Report Files
+        run: ls -l build/reports/jacoco/test/
+
+
+      - name: Extract Coverage Percentage
+        id: coverage
+        run: |
+          COVERAGE=$(grep -oPm1 "(?<=<counter type=\"LINE\" covered=\")\d+" build/reports/jacoco/test/jacocoTestReport.xml)
+          MISSED=$(grep -oPm1 "(?<=missed=\")\d+" build/reports/jacoco/test/jacocoTestReport.xml)
+          TOTAL=$((COVERAGE + MISSED))
+          PERCENTAGE=$(awk "BEGIN {printf \"%.2f\", (${COVERAGE} / ${TOTAL}) * 100}")
+          echo "coverage=$PERCENTAGE" >> $GITHUB_ENV
+
+      - name: Print Coverage
+        run: |
+          echo "Line Coverage: ${{ env.coverage }}%"
+
+      - name: Post Coverage to PR
+        if: github.event_name == 'pull_request'
+        run: |
+          gh auth login --with-token ${{ secrets.GITHUB_TOKEN }}
+          gh pr comment ${{ github.event.pull_request.number }} --body "JaCoCo Code Coverage: ${{ env.coverage }}%"
