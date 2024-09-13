@@ -20,7 +20,9 @@ jobs:
           distribution: 'temurin'
 
       - name: Build and test with JaCoCo
-        run: ./gradlew clean build jacocoTestReport
+        run: |
+         chmod +x gradlew
+         ./gradlew clean build jacocoTestReport
 
       - name: Check for JaCoCo XML report
         run: ls build/reports/jacoco/test/jacocoTestReport.xml
