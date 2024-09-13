@@ -30,7 +30,7 @@ jobs:
             exit 1
           fi
           echo "Java Version: $JAVA_VERSION"
-          echo "::set-output name=java_version::$JAVA_VERSION"
+          echo "java_version=$JAVA_VERSION" >> $GITHUB_ENV
 
   build-and-test-pr:
     name: Build and Test PR
