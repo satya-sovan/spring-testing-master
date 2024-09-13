@@ -101,7 +101,7 @@ jobs:
       - name: Post Coverage to PR
         if: github.event_name == 'pull_request'
         run: |
-          gh auth login --with-token ${{ secrets.GITHUB_TOKEN }}
+          #gh auth login --with-token ${{ secrets.GITHUB_TOKEN }}
           gh pr comment ${{ github.event.pull_request.number }} --body-file "coverage_summary.txt"
 
       - name: Add comment to PR using gh CLI
