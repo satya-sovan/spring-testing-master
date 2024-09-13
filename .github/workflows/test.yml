@@ -87,6 +87,8 @@ jobs:
           summary += f"**Method Coverage**: {coverage['method_coverage']:.2f}%\\n"
           summary += f"**Class Coverage**: {coverage['class_coverage']:.2f}%\\n"
           
+          print(summary)
+          
           with open('coverage_summary.txt', 'w') as f:
               f.write(summary)
           EOF
