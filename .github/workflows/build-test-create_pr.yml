@@ -1,4 +1,4 @@
-name: Build, Test, and Create PR from develop to master
+name: Build-and-test
 
 on:
   pull_request:
@@ -30,7 +30,7 @@ jobs:
             exit 1
           fi
           echo "Java Version: $JAVA_VERSION"
-          echo "::set-output name=java_version::$JAVA_VERSION"
+          echo "java_version=$JAVA_VERSION" >> $GITHUB_OUTPUT
 
   build-and-test-pr:
     name: Build and Test PR
@@ -48,17 +48,16 @@ jobs:
           distribution: 'temurin'
           java-version: ${{ needs.extract-java-version.outputs.java_version }}
 
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
-
       - name: Build and test with Gradle
-        run: ./gradlew clean build
+        run: |
+          chmod +x ./gradlew
+          ./gradlew clean build
 
   merge-to-target-and-build:
     name: Merge and Build on Target Branch
     needs:
       - build-and-test-pr
-      - extract_java_version
+      - extract-java-version
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
 
@@ -87,13 +86,15 @@ jobs:
           java-version: ${{ needs.extract-java-version.outputs.java_version }}
 
       - name: Build and test with Gradle
-        run: ./gradlew clean build
+        run: |
+          chmod +x ./gradlew
+          ./gradlew clean build
 
   test-report:
     name: Code Coverage
     needs:
       - build-and-test-pr
-      - extract_java_version
+      - extract-java-version
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -167,8 +168,8 @@ jobs:
           def coverage_indicator(coverage):
             return "🔴" if coverage < 80 else "🟢"
 
-          summary = f"### JaCoCo Coverage Summary:\\n"
-          summary += f"**Instruction Coverage**: {coverage_indicator(coverage['instruction_coverage'])} {coverage['instruction_coverage']:.2f}%\\n"
+          summary = f"### Test Coverage Summary:\\n"
+          summary += f"**Instruction/code Coverage**: {coverage_indicator(coverage['instruction_coverage'])} {coverage['instruction_coverage']:.2f}%\\n"
           summary += f"**Line Coverage**: {coverage_indicator(coverage['line_coverage'])} {coverage['line_coverage']:.2f}%\\n"
           summary += f"**Branch Coverage**: {coverage_indicator(coverage['branch_coverage'])} {coverage['branch_coverage']:.2f}%\\n"
           summary += f"**Method Coverage**: {coverage_indicator(coverage['method_coverage'])} {coverage['method_coverage']:.2f}%\\n"
