@@ -102,11 +102,11 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           gh auth login --with-token ${{ secrets.GITHUB_TOKEN }}
-          gh pr comment ${{ github.event.pull_request.number }} --body "JaCoCo Code Coverage: test"
+          gh pr comment ${{ github.event.pull_request.number }} --body-file "coverage_summary.txt"
 
       - name: Add comment to PR using gh CLI
         if: false #github.event_name == 'pull_request'
         run: |
           COMMENT_BODY=$(cat coverage_summary.txt)
-          gh pr comment ${{ github.event.pull_request.number }} --body "$COMMENT_BODY"
+          gh pr comment ${{ github.event.pull_request.number }} --body-file "coverage_summary.txt"
         
