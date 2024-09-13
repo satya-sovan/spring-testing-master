@@ -54,6 +54,7 @@ jobs:
                   "branch_coverage": None,
                   "method_coverage": None,
                   "class_coverage": None,
+                  "instruction_coverage": None,
               }
           
               # JaCoCo XML uses 'counter' tags for different coverage types
@@ -79,6 +80,8 @@ jobs:
                           coverage_data["method_coverage"] = percentage
                       elif coverage_type == "CLASS":
                           coverage_data["class_coverage"] = percentage
+                      elif coverage_type == "INSTRUCTION":
+                          coverage_data["instruction_coverage"] = percentage
           
               return coverage_data
           
@@ -95,6 +98,7 @@ jobs:
   
           # Build summary with color indicators
           summary = f"### JaCoCo Coverage Summary:\\n"
+          summary += f"**Instruction Coverage**: {coverage_indicator(coverage['instruction_coverage'])} {coverage['instruction_coverage']:.2f}%\\n"
           summary += f"**Line Coverage**: {coverage_indicator(coverage['line_coverage'])} {coverage['line_coverage']:.2f}%\\n"
           summary += f"**Branch Coverage**: {coverage_indicator(coverage['branch_coverage'])} {coverage['branch_coverage']:.2f}%\\n"
           summary += f"**Method Coverage**: {coverage_indicator(coverage['method_coverage'])} {coverage['method_coverage']:.2f}%\\n"
