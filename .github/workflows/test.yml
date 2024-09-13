@@ -97,5 +97,6 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           COMMENT_BODY=$(cat coverage_summary.txt)
+          gh auth login --with-token ${{ secrets.GITHUB_TOKEN }}
           gh pr comment ${{ github.event.pull_request.number }} --body "$COMMENT_BODY"
         
