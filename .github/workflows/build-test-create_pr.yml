@@ -184,23 +184,3 @@ jobs:
         run: gh pr comment ${{ github.event.pull_request.number }} --body-file "coverage_summary.txt"
         env:
           GH_TOKEN: ${{ github.token }}
-
-      - name: Create GitHub Check for Coverage Report
-        run: |
-          CHECK_RUN_ID=$(gh api --method POST /repos/${{ github.repository }}/check-runs \
-            -H "Accept: application/vnd.github.v3+json" \
-            -f name="Coverage Report" \
-            -f head_sha="${{ github.sha }}" \
-            -f status="in_progress" \
-            -q '.id')
-          
-          SUMMARY=$(cat coverage_summary.txt)
-          
-          gh api --method PATCH /repos/${{ github.repository }}/check-runs/$CHECK_RUN_ID \
-            -H "Accept: application/vnd.github.v3+json" \
-            -f status="completed" \
-            -f conclusion="success" \
-            -F output.title="Test Coverage Results" \
-            -F output.summary="$SUMMARY"
-        env:
-          GH_TOKEN: ${{ github.token }}
