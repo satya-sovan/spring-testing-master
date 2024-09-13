@@ -1,6 +1,9 @@
 name: CI Pipeline
 
 on:
+  push:
+    branches:
+      - develop
   pull_request:
     branches:
       - develop
@@ -20,9 +23,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Build and test with JaCoCo
-        run: |
-         chmod +x gradlew
-         ./gradlew clean build jacocoTestReport
+        run: ./gradlew clean build jacocoTestReport
 
       - name: Check for JaCoCo XML report
         run: ls build/reports/jacoco/test/jacocoTestReport.xml
@@ -32,7 +33,8 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Run inline Python script to parse JaCoCo report
+      - name: Run inline Python script to parse JaCoCo report and save summary
+        id: coverage
         run: |
           python - <<EOF
           import xml.etree.ElementTree as ET
@@ -55,6 +57,10 @@ jobs:
                   missed = int(counter.attrib['missed'])
                   total = covered + missed
           
+                  print(f"Coverage Summary: {coverage_type}")
+                  print(f"covered: {covered}")
+                  print(f"missed: {missed}")
+          
                   if total > 0:
                       percentage = (covered / total) * 100
           
@@ -73,22 +79,19 @@ jobs:
           report_path = "build/reports/jacoco/test/jacocoTestReport.xml"
           coverage = parse_jacoco_report(report_path)
           
-          print("Coverage Summary:")
-          print(f"Line Coverage: {coverage['line_coverage']:.2f}%")
-          print(f"Branch Coverage: {coverage['branch_coverage']:.2f}%")
-          print(f"Method Coverage: {coverage['method_coverage']:.2f}%")
-          print(f"Class Coverage: {coverage['class_coverage']:.2f}%")
+          summary = f"### JaCoCo Coverage Summary:\\n"
+          summary += f"**Line Coverage**: {coverage['line_coverage']:.2f}%\\n"
+          summary += f"**Branch Coverage**: {coverage['branch_coverage']:.2f}%\\n"
+          summary += f"**Method Coverage**: {coverage['method_coverage']:.2f}%\\n"
+          summary += f"**Class Coverage**: {coverage['class_coverage']:.2f}%\\n"
           
           with open('coverage_summary.txt', 'w') as f:
-              f.write("Coverage Summary:\n")
-              f.write(f"Line Coverage: {coverage['line_coverage']:.2f}%\n")
-              f.write(f"Branch Coverage: {coverage['branch_coverage']:.2f}%\n")
-              f.write(f"Method Coverage: {coverage['method_coverage']:.2f}%\n")
-              f.write(f"Class Coverage: {coverage['class_coverage']:.2f}%\n")
+              f.write(summary)
           EOF
 
-      - name: Upload coverage summary as an artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: coverage-summary
-          path: coverage_summary.txt
+      - name: Add comment to PR using gh CLI
+        if: github.event_name == 'pull_request'
+        run: |
+          COMMENT_BODY=$(cat coverage_summary.txt)
+          gh pr comment ${{ github.event.pull_request.number }} --body "$COMMENT_BODY"
+        
