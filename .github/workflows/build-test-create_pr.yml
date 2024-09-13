@@ -1,4 +1,4 @@
-name: Build and test
+name: Build, Test, and Create PR from develop to master
 
 on:
   pull_request:
@@ -6,8 +6,35 @@ on:
       - '*'
 
 jobs:
+  extract-java-version:
+    name: Extract Java Version
+    runs-on: ubuntu-latest
+    outputs:
+      java_version: ${{ steps.extract_java_version.outputs.java_version }}
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Extract Java version from build.gradle
+        id: extract_java_version
+        run: |
+          JAVA_VERSION=$(grep 'sourceCompatibility' build.gradle | awk '{print $3}' | sed "s/'//g")
+          if [[ "$JAVA_VERSION" == "1.8" ]]; then
+            JAVA_VERSION="8"
+          elif [[ "$JAVA_VERSION" == "17" ]]; then
+            JAVA_VERSION="17"
+          else
+            echo "Unsupported Java version format."
+            exit 1
+          fi
+          echo "Java Version: $JAVA_VERSION"
+          echo "::set-output name=java_version::$JAVA_VERSION"
+
   build-and-test-pr:
     name: Build and Test PR
+    needs: extract-java-version
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
 
@@ -15,17 +42,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Setup Java and Gradle
-        uses: ./.github/actions/setup-java
+      - name: Set up JDK
+        uses: actions/setup-java@v4
         with:
-          gradle-file: 'build.gradle'
+          distribution: 'temurin'
+          java-version: ${{ needs.extract-java-version.outputs.java_version }}
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
 
       - name: Build and test with Gradle
         run: ./gradlew clean build
 
   merge-to-target-and-build:
     name: Merge and Build on Target Branch
-    needs: build-and-test-pr
+    needs:
+      - build-and-test-pr
+      - extract_java_version
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
 
@@ -47,17 +80,20 @@ jobs:
           git checkout -b temp-merge-branch
           git merge origin/${{ github.event.pull_request.head.ref }} --no-ff --commit -m "Merge PR source branch"
 
-      - name: Setup Java and Gradle
-        uses: ./.github/actions/setup-java
+      - name: Set up JDK
+        uses: actions/setup-java@v4
         with:
-          gradle-file: 'build.gradle'
+          distribution: 'temurin'
+          java-version: ${{ needs.extract-java-version.outputs.java_version }}
 
       - name: Build and test with Gradle
         run: ./gradlew clean build
 
   test-report:
     name: Code Coverage
-    needs: build-and-test-pr
+    needs:
+      - build-and-test-pr
+      - extract_java_version
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -66,10 +102,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Setup Java and Gradle
-        uses: ./.github/actions/setup-java
+      - name: Set up JDK
+        uses: actions/setup-java@v4
         with:
-          gradle-file: 'build.gradle'
+          distribution: 'temurin'
+          java-version: ${{ needs.extract-java-version.outputs.java_version }}
 
       - name: Build and test with JaCoCo
         run: |
