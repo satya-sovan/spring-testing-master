@@ -58,10 +58,11 @@ jobs:
                   covered = int(counter.attrib['covered'])
                   missed = int(counter.attrib['missed'])
                   total = covered + missed
-          
-                  print(f"Coverage Summary: {coverage_type}")
-                  print(f"covered: {covered}")
-                  print(f"missed: {missed}")
+                  
+                  #Only for debug
+                  #print(f"Coverage Summary: {coverage_type}")
+                  #print(f"covered: {covered}")
+                  #print(f"missed: {missed}")
           
                   if total > 0:
                       percentage = (covered / total) * 100
@@ -97,6 +98,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           COMMENT_BODY=$(cat coverage_summary.txt)
-          gh auth login --with-token ${{ secrets.GITHUB_TOKEN }}
           gh pr comment ${{ github.event.pull_request.number }} --body "$COMMENT_BODY"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
