@@ -49,3 +49,20 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+task testCoverage(type: JacocoReport) {
+	executionData fileTree(dir: "$buildDir", includes: [
+			"jacoco/test.exec",
+	])
+	sourceDirectories.setFrom files(sourceSets.main.allSource.srcDirs)
+	classDirectories.setFrom files(sourceSets.main.output)
+
+	reports {
+		xml.required.set(true)
+		html.required.set(true)
+	}
+}
+
+tasks.named('build') {
+	dependsOn(tasks.named('jacocoTestReport'))
+}
