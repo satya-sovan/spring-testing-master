@@ -20,14 +20,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Post Coverage to PR Test
-        if: github.event_name == 'pull_request'
-        run: |
-          gh pr comment ${{ github.event.pull_request.number }} --body "test"
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
@@ -94,12 +86,20 @@ jobs:
           report_path = "build/reports/jacoco/test/jacocoTestReport.xml"
           coverage = parse_jacoco_report(report_path)
           
+          # Define color indicators
+          def coverage_indicator(coverage):
+            if coverage < 80:
+              return "🔴"  # Red circle emoji
+            else:
+              return "🟢"  # Green circle emoji
+  
+          # Build summary with color indicators
           summary = f"### JaCoCo Coverage Summary:\\n"
-          summary += f"**Line Coverage**: {coverage['line_coverage']:.2f}%\\n"
-          summary += f"**Branch Coverage**: {coverage['branch_coverage']:.2f}%\\n"
-          summary += f"**Method Coverage**: {coverage['method_coverage']:.2f}%\\n"
-          summary += f"**Class Coverage**: {coverage['class_coverage']:.2f}%\\n"
-          
+          summary += f"**Line Coverage**: {coverage_indicator(coverage['line_coverage'])} {coverage['line_coverage']:.2f}%\\n"
+          summary += f"**Branch Coverage**: {coverage_indicator(coverage['branch_coverage'])} {coverage['branch_coverage']:.2f}%\\n"
+          summary += f"**Method Coverage**: {coverage_indicator(coverage['method_coverage'])} {coverage['method_coverage']:.2f}%\\n"
+          summary += f"**Class Coverage**: {coverage_indicator(coverage['class_coverage'])} {coverage['class_coverage']:.2f}%\\n"
+                                           
           print(summary)
           
           with open('coverage_summary.txt', 'w') as f:
