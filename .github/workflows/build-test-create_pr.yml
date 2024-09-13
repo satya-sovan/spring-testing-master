@@ -202,3 +202,5 @@ jobs:
             -f conclusion="success" \
             -F output.title="Test Coverage Results" \
             -F output.summary="$SUMMARY"
+        env:
+          GH_TOKEN: ${{ github.token }}
