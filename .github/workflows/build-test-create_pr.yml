@@ -46,7 +46,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: ${{ needs.extract-java-version.outputs.java_version }}
+          java-version: ${{ env.java_version }}
 
       - name: Build and test with Gradle
         run: |
@@ -83,7 +83,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: ${{ needs.extract-java-version.outputs.java_version }}
+          java-version: ${{ env.java_version }}
 
       - name: Build and test with Gradle
         run: |
@@ -107,7 +107,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: ${{ needs.extract-java-version.outputs.java_version }}
+          java-version: ${{ env.java_version }}
 
       - name: Build and test with JaCoCo
         run: |
