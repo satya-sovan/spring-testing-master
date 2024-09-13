@@ -17,6 +17,9 @@ jobs:
       pull-requests: write
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
       - name: Post Coverage to PR Test
         if: github.event_name == 'pull_request'
         run: |
@@ -24,8 +27,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-      - name: Checkout code
-        uses: actions/checkout@v3
 
       - name: Set up JDK 17
         uses: actions/setup-java@v3
