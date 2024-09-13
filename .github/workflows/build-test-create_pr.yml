@@ -1,4 +1,4 @@
-name: Build, Test, and Create PR from develop to master
+name: Build-and-test
 
 on:
   pull_request:
