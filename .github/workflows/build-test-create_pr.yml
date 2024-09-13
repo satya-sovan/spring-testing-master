@@ -48,11 +48,10 @@ jobs:
           distribution: 'temurin'
           java-version: ${{ needs.extract-java-version.outputs.java_version }}
 
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
-
       - name: Build and test with Gradle
-        run: ./gradlew clean build
+        run: |
+          chmod +x ./gradlew
+          ./gradlew clean build
 
   merge-to-target-and-build:
     name: Merge and Build on Target Branch
@@ -87,7 +86,9 @@ jobs:
           java-version: ${{ needs.extract-java-version.outputs.java_version }}
 
       - name: Build and test with Gradle
-        run: ./gradlew clean build
+        run: |
+          chmod +x ./gradlew
+          ./gradlew clean build
 
   test-report:
     name: Code Coverage
