@@ -184,3 +184,24 @@ jobs:
         run: gh pr comment ${{ github.event.pull_request.number }} --body-file "coverage_summary.txt"
         env:
           GH_TOKEN: ${{ github.token }}
+
+      - name: Create GitHub Check for Coverage Report
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { exec } = require('@actions/exec');
+            const fs = require('fs');
+            const summary = fs.readFileSync('coverage_summary.txt', 'utf8');
+            
+            await github.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: "Coverage Report",
+              head_sha: context.sha,
+              status: "completed",
+              conclusion: "success",
+              output: {
+                title: "Test Coverage Results",
+                summary: summary
+              }
+            });
